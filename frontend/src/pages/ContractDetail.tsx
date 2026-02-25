@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ClipboardCheck, FileText } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ClipboardCheck, FileText, ArrowLeft, ArrowRight, ChevronDown, ChevronUp } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -29,8 +29,11 @@ export function ContractDetail() {
 
   if (loading) {
     return (
-      <div className="flex h-64 items-center justify-center text-muted-foreground">
-        Loading contract...
+      <div className="flex h-64 items-center justify-center">
+        <div className="flex items-center gap-3 text-muted-foreground">
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          Loading contract...
+        </div>
       </div>
     );
   }
@@ -53,51 +56,46 @@ export function ContractDetail() {
   const types = Object.keys(byType) as ClauseType[];
 
   return (
-    <div className="space-y-6">
-      {/* Header card */}
-      <Card>
-        <CardHeader className="flex flex-row items-start justify-between gap-4">
-          <div className="flex items-start gap-3">
-            <FileText className="mt-1 h-6 w-6 text-primary" />
-            <div>
-              <CardTitle className="text-xl">{contract.filename}</CardTitle>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Uploaded {new Date(contract.upload_timestamp).toLocaleString()}
-              </p>
-            </div>
-          </div>
-          <Button asChild>
-            <Link to={`/contracts/${contract.contract_id}/review`}>
-              <ClipboardCheck className="mr-2 h-4 w-4" />
-              Run Review
-            </Link>
+    <div className="space-y-8">
+      {/* Back link + header */}
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <Button variant="ghost" size="icon" asChild className="mt-1 shrink-0">
+            <Link to="/"><ArrowLeft className="h-4 w-4" /></Link>
           </Button>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
-            <div>
-              <p className="text-muted-foreground">Pages</p>
-              <p className="font-medium">{contract.num_pages}</p>
+          <div>
+            <div className="flex items-center gap-3">
+              <FileText className="h-6 w-6 text-primary" />
+              <h1 className="text-2xl font-bold tracking-tight">{contract.filename}</h1>
             </div>
-            <div>
-              <p className="text-muted-foreground">Clauses</p>
-              <p className="font-medium">{contract.num_clauses}</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground">Text Length</p>
-              <p className="font-medium">
-                {contract.text_length.toLocaleString()} chars
-              </p>
-            </div>
-            <div>
-              <p className="text-muted-foreground">Types</p>
-              <div className="flex flex-wrap gap-1 pt-0.5">
+            <p className="mt-1 text-sm text-muted-foreground ml-9">
+              Uploaded {new Date(contract.upload_timestamp).toLocaleDateString('en-US', {
+                month: 'long', day: 'numeric', year: 'numeric'
+              })}
+            </p>
+          </div>
+        </div>
+        <Button asChild>
+          <Link to={`/contracts/${contract.contract_id}/review`}>
+            <ClipboardCheck className="mr-2 h-4 w-4" />
+            Run Review
+            <ArrowRight className="ml-1 h-3.5 w-3.5" />
+          </Link>
+        </Button>
+      </div>
+
+      {/* Stats bar */}
+      <Card>
+        <CardContent className="p-0">
+          <div className="grid grid-cols-2 divide-x sm:grid-cols-4">
+            <MetricCell label="Pages" value={String(contract.num_pages)} />
+            <MetricCell label="Clauses" value={String(contract.num_clauses)} />
+            <MetricCell label="Characters" value={contract.text_length.toLocaleString()} />
+            <div className="p-5">
+              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Types</p>
+              <div className="mt-2 flex flex-wrap gap-1">
                 {contract.clause_types_found.map((t) => (
-                  <Badge
-                    key={t}
-                    variant="secondary"
-                    className={CLAUSE_TYPE_COLORS[t]}
-                  >
+                  <Badge key={t} variant="secondary" className={`text-[10px] ${CLAUSE_TYPE_COLORS[t]}`}>
                     {CLAUSE_TYPE_LABELS[t]}
                   </Badge>
                 ))}
@@ -109,26 +107,34 @@ export function ContractDetail() {
 
       {/* Clause tabs */}
       {types.length > 0 ? (
-        <Tabs defaultValue={types[0]}>
-          <TabsList className="flex-wrap">
-            {types.map((t) => (
-              <TabsTrigger key={t} value={t}>
-                {CLAUSE_TYPE_LABELS[t]} ({byType[t].length})
-              </TabsTrigger>
-            ))}
-          </TabsList>
-
-          {types.map((t) => (
-            <TabsContent key={t} value={t} className="space-y-3">
-              {byType[t].map((clause) => (
-                <ClauseCard key={clause.clause_id} clause={clause} />
+        <div>
+          <h2 className="mb-4 text-lg font-semibold">Extracted Clauses</h2>
+          <Tabs defaultValue={types[0]}>
+            <TabsList className="mb-4 flex-wrap h-auto gap-1 bg-transparent p-0">
+              {types.map((t) => (
+                <TabsTrigger
+                  key={t}
+                  value={t}
+                  className="rounded-full border border-border bg-card data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-primary"
+                >
+                  {CLAUSE_TYPE_LABELS[t]}
+                  <span className="ml-1.5 text-xs opacity-70">({byType[t].length})</span>
+                </TabsTrigger>
               ))}
-            </TabsContent>
-          ))}
-        </Tabs>
+            </TabsList>
+
+            {types.map((t) => (
+              <TabsContent key={t} value={t} className="space-y-3">
+                {byType[t].map((clause) => (
+                  <ClauseCard key={clause.clause_id} clause={clause} />
+                ))}
+              </TabsContent>
+            ))}
+          </Tabs>
+        </div>
       ) : (
-        <Card>
-          <CardContent className="py-8 text-center text-muted-foreground">
+        <Card className="border-dashed">
+          <CardContent className="py-12 text-center text-muted-foreground">
             No clauses extracted for this contract.
           </CardContent>
         </Card>
@@ -137,55 +143,61 @@ export function ContractDetail() {
   );
 }
 
+function MetricCell({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="p-5">
+      <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
+      <p className="mt-1 text-2xl font-bold">{value}</p>
+    </div>
+  );
+}
+
 function ClauseCard({ clause }: { clause: ExtractedClause }) {
   const [expanded, setExpanded] = useState(false);
   const isLong = clause.text.length > 300;
+  const confidence = Math.round(clause.confidence * 100);
 
   return (
-    <Card>
-      <CardContent className="space-y-3 pt-6">
-        <div className="flex items-center gap-2">
-          <Badge variant="secondary" className={CLAUSE_TYPE_COLORS[clause.clause_type]}>
-            {CLAUSE_TYPE_LABELS[clause.clause_type]}
-          </Badge>
-          {clause.section_number && (
+    <Card className="transition-shadow hover:shadow-sm">
+      <CardContent className="p-5 space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary" className={CLAUSE_TYPE_COLORS[clause.clause_type]}>
+              {CLAUSE_TYPE_LABELS[clause.clause_type]}
+            </Badge>
+            {clause.section_number && (
+              <span className="text-xs text-muted-foreground">
+                Sec. {clause.section_number}
+              </span>
+            )}
             <span className="text-xs text-muted-foreground">
-              Section {clause.section_number}
+              p.{clause.page_number}
             </span>
-          )}
-          <span className="text-xs text-muted-foreground">
-            Page {clause.page_number}
-          </span>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <div className="h-1.5 w-16 rounded-full bg-muted overflow-hidden">
+              <div
+                className="h-full rounded-full bg-primary transition-all"
+                style={{ width: `${confidence}%` }}
+              />
+            </div>
+            <span className="tabular-nums font-medium">{confidence}%</span>
+          </div>
         </div>
 
-        <p className="text-sm leading-relaxed whitespace-pre-wrap">
-          {isLong && !expanded
-            ? clause.text.slice(0, 300) + '...'
-            : clause.text}
+        <p className="text-sm leading-relaxed whitespace-pre-wrap text-foreground/90">
+          {isLong && !expanded ? clause.text.slice(0, 300) + '...' : clause.text}
         </p>
 
         {isLong && (
           <button
             onClick={() => setExpanded(!expanded)}
-            className="text-xs font-medium text-primary hover:underline"
+            className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
           >
+            {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
             {expanded ? 'Show less' : 'Show more'}
           </button>
         )}
-
-        {/* Confidence bar */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">Confidence</span>
-          <div className="h-2 flex-1 rounded-full bg-muted">
-            <div
-              className="h-2 rounded-full bg-primary transition-all"
-              style={{ width: `${Math.round(clause.confidence * 100)}%` }}
-            />
-          </div>
-          <span className="text-xs font-medium">
-            {Math.round(clause.confidence * 100)}%
-          </span>
-        </div>
       </CardContent>
     </Card>
   );

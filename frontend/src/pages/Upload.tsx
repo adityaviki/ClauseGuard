@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Loader2, CheckCircle2, AlertCircle, Eye, ClipboardCheck } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { CheckCircle2, AlertCircle, Eye, ClipboardCheck, ArrowRight } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { DropZone } from '@/components/DropZone';
@@ -28,67 +28,64 @@ export function UploadPage() {
   };
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <h1 className="text-2xl font-bold">Upload Contract</h1>
+    <div className="mx-auto max-w-2xl space-y-8">
+      {/* Page header */}
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Upload Contract</h1>
+        <p className="mt-1 text-muted-foreground">
+          Upload a PDF or text file for AI-powered clause extraction and analysis.
+        </p>
+      </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Select a file</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <DropZone onFile={handleFile} disabled={status === 'loading'} />
+        <CardContent className="p-6">
+          <DropZone onFile={handleFile} disabled={status === 'loading'} loading={status === 'loading'} />
         </CardContent>
       </Card>
 
-      {status === 'loading' && (
-        <Card>
-          <CardContent className="flex items-center gap-3 pt-6">
-            <Loader2 className="h-5 w-5 animate-spin text-primary" />
-            <span>Uploading and analyzing contract...</span>
-          </CardContent>
-        </Card>
-      )}
-
       {status === 'error' && (
-        <Card className="border-destructive">
-          <CardContent className="flex items-center gap-3 pt-6 text-destructive">
-            <AlertCircle className="h-5 w-5" />
-            <span>{error}</span>
+        <Card className="border-destructive/50 bg-destructive/5">
+          <CardContent className="flex items-start gap-3 p-5">
+            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
+            <div>
+              <p className="font-medium text-destructive">Upload failed</p>
+              <p className="mt-1 text-sm text-muted-foreground">{error}</p>
+            </div>
           </CardContent>
         </Card>
       )}
 
       {status === 'success' && result && (
-        <Card className="border-green-500">
-          <CardContent className="space-y-4 pt-6">
-            <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
-              <CheckCircle2 className="h-5 w-5" />
-              <span className="font-medium">{result.message}</span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <p className="text-muted-foreground">Filename</p>
-                <p className="font-medium">{result.filename}</p>
+        <Card className="border-emerald-200 bg-emerald-50/50">
+          <CardContent className="p-6 space-y-5">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100">
+                <CheckCircle2 className="h-5 w-5 text-emerald-600" />
               </div>
               <div>
-                <p className="text-muted-foreground">Clauses Found</p>
-                <p className="font-medium">{result.num_clauses}</p>
+                <p className="font-semibold text-emerald-900">{result.message}</p>
+                <p className="text-sm text-emerald-700">{result.filename}</p>
               </div>
             </div>
 
-            <div>
-              <p className="mb-2 text-sm text-muted-foreground">Clause Types</p>
-              <div className="flex flex-wrap gap-1">
-                {result.clause_types_found.map((t) => (
-                  <Badge key={t} variant="secondary" className={CLAUSE_TYPE_COLORS[t]}>
-                    {CLAUSE_TYPE_LABELS[t]}
-                  </Badge>
-                ))}
+            <div className="grid grid-cols-2 gap-6 rounded-lg bg-white p-4 shadow-sm">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Clauses Found</p>
+                <p className="mt-1 text-2xl font-bold">{result.num_clauses}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Clause Types</p>
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {result.clause_types_found.map((t) => (
+                    <Badge key={t} variant="secondary" className={`text-[10px] ${CLAUSE_TYPE_COLORS[t]}`}>
+                      {CLAUSE_TYPE_LABELS[t]}
+                    </Badge>
+                  ))}
+                </div>
               </div>
             </div>
 
-            <div className="flex gap-2 pt-2">
+            <div className="flex gap-3">
               <Button asChild>
                 <Link to={`/contracts/${result.contract_id}`}>
                   <Eye className="mr-2 h-4 w-4" />
@@ -99,6 +96,7 @@ export function UploadPage() {
                 <Link to={`/contracts/${result.contract_id}/review`}>
                   <ClipboardCheck className="mr-2 h-4 w-4" />
                   Run Review
+                  <ArrowRight className="ml-1 h-3.5 w-3.5" />
                 </Link>
               </Button>
             </div>

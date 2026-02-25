@@ -8,8 +8,9 @@ import {
   Eye,
   ClipboardCheck,
   Upload,
+  ArrowRight,
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -43,8 +44,11 @@ export function Dashboard() {
 
   if (loading) {
     return (
-      <div className="flex h-64 items-center justify-center text-muted-foreground">
-        Loading contracts...
+      <div className="flex h-64 items-center justify-center">
+        <div className="flex items-center gap-3 text-muted-foreground">
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          Loading contracts...
+        </div>
       </div>
     );
   }
@@ -58,28 +62,37 @@ export function Dashboard() {
   }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Dashboard</h1>
+    <div className="space-y-8">
+      {/* Page header */}
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+        <p className="mt-1 text-muted-foreground">
+          Overview of your contract portfolio and clause analysis.
+        </p>
+      </div>
 
-      {/* Stats row */}
+      {/* Stats grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          icon={FileText}
-          label="Contracts"
-          value={contracts.length}
-        />
-        <StatCard icon={List} label="Clauses" value={totalClauses} />
-        <StatCard icon={Tags} label="Clause Types" value={uniqueTypes.size} />
-        <StatCard icon={BookOpen} label="Pages Analyzed" value={totalPages} />
+        <StatCard icon={FileText} label="Contracts" value={contracts.length} color="bg-blue-500/10 text-blue-600" />
+        <StatCard icon={List} label="Clauses Extracted" value={totalClauses} color="bg-emerald-500/10 text-emerald-600" />
+        <StatCard icon={Tags} label="Clause Types" value={uniqueTypes.size} color="bg-violet-500/10 text-violet-600" />
+        <StatCard icon={BookOpen} label="Pages Analyzed" value={totalPages} color="bg-amber-500/10 text-amber-600" />
       </div>
 
       {/* Contracts table or empty state */}
       {contracts.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center gap-4 py-12">
-            <FileText className="h-12 w-12 text-muted-foreground" />
-            <p className="text-muted-foreground">No contracts uploaded yet.</p>
-            <Button asChild>
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col items-center gap-4 py-16">
+            <div className="rounded-full bg-muted p-4">
+              <FileText className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <div className="text-center">
+              <h3 className="text-lg font-semibold">No contracts yet</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Upload your first contract to get started with clause extraction and compliance review.
+              </p>
+            </div>
+            <Button asChild size="lg">
               <Link to="/upload">
                 <Upload className="mr-2 h-4 w-4" />
                 Upload Contract
@@ -89,64 +102,88 @@ export function Dashboard() {
         </Card>
       ) : (
         <Card>
-          <CardHeader>
-            <CardTitle>Contracts</CardTitle>
-          </CardHeader>
-          <CardContent>
+          <div className="flex items-center justify-between border-b px-6 py-4">
+            <div>
+              <h2 className="text-lg font-semibold">Contracts</h2>
+              <p className="text-sm text-muted-foreground">
+                {contracts.length} contract{contracts.length !== 1 ? 's' : ''} uploaded
+              </p>
+            </div>
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/upload">
+                <Upload className="mr-2 h-3.5 w-3.5" />
+                Upload New
+              </Link>
+            </Button>
+          </div>
+          <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Filename</TableHead>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="pl-6">Filename</TableHead>
                   <TableHead>Uploaded</TableHead>
                   <TableHead className="text-center">Pages</TableHead>
                   <TableHead className="text-center">Clauses</TableHead>
                   <TableHead>Types</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="pr-6 text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {contracts.map((c) => (
                   <TableRow key={c.contract_id}>
-                    <TableCell>
+                    <TableCell className="pl-6">
                       <Link
                         to={`/contracts/${c.contract_id}`}
-                        className="font-medium text-primary hover:underline"
+                        className="inline-flex items-center gap-2 font-medium text-foreground hover:text-primary transition-colors"
                       >
+                        <FileText className="h-4 w-4 text-muted-foreground" />
                         {c.filename}
                       </Link>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {new Date(c.upload_timestamp).toLocaleDateString()}
+                    <TableCell className="text-muted-foreground text-sm">
+                      {new Date(c.upload_timestamp).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })}
                     </TableCell>
-                    <TableCell className="text-center">{c.num_pages}</TableCell>
+                    <TableCell className="text-center text-sm">{c.num_pages}</TableCell>
                     <TableCell className="text-center">
-                      {c.num_clauses}
+                      <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-primary/10 px-2 text-xs font-semibold text-primary">
+                        {c.num_clauses}
+                      </span>
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
-                        {c.clause_types_found.map((t) => (
+                        {c.clause_types_found.slice(0, 4).map((t) => (
                           <Badge
                             key={t}
                             variant="secondary"
-                            className={CLAUSE_TYPE_COLORS[t]}
+                            className={`text-[10px] px-1.5 py-0 ${CLAUSE_TYPE_COLORS[t]}`}
                           >
                             {CLAUSE_TYPE_LABELS[t]}
                           </Badge>
                         ))}
+                        {c.clause_types_found.length > 4 && (
+                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                            +{c.clause_types_found.length - 4}
+                          </Badge>
+                        )}
                       </div>
                     </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button variant="outline" size="sm" asChild>
+                    <TableCell className="pr-6 text-right">
+                      <div className="flex justify-end gap-1.5">
+                        <Button variant="ghost" size="sm" asChild className="h-8 px-2.5">
                           <Link to={`/contracts/${c.contract_id}`}>
-                            <Eye className="mr-1 h-3 w-3" />
+                            <Eye className="mr-1.5 h-3.5 w-3.5" />
                             View
                           </Link>
                         </Button>
-                        <Button variant="outline" size="sm" asChild>
+                        <Button variant="default" size="sm" asChild className="h-8 px-2.5">
                           <Link to={`/contracts/${c.contract_id}/review`}>
-                            <ClipboardCheck className="mr-1 h-3 w-3" />
+                            <ClipboardCheck className="mr-1.5 h-3.5 w-3.5" />
                             Review
+                            <ArrowRight className="ml-1 h-3 w-3" />
                           </Link>
                         </Button>
                       </div>
@@ -155,7 +192,7 @@ export function Dashboard() {
                 ))}
               </TableBody>
             </Table>
-          </CardContent>
+          </div>
         </Card>
       )}
     </div>
@@ -166,20 +203,22 @@ function StatCard({
   icon: Icon,
   label,
   value,
+  color,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   value: number;
+  color: string;
 }) {
   return (
-    <Card>
-      <CardContent className="flex items-center gap-4 pt-6">
-        <div className="rounded-lg bg-primary/10 p-3">
-          <Icon className="h-5 w-5 text-primary" />
+    <Card className="transition-shadow hover:shadow-md">
+      <CardContent className="flex items-center gap-4 p-6">
+        <div className={`rounded-xl p-3 ${color}`}>
+          <Icon className="h-5 w-5" />
         </div>
         <div>
-          <p className="text-sm text-muted-foreground">{label}</p>
-          <p className="text-2xl font-bold">{value}</p>
+          <p className="text-sm font-medium text-muted-foreground">{label}</p>
+          <p className="text-3xl font-bold tracking-tight">{value}</p>
         </div>
       </CardContent>
     </Card>

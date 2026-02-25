@@ -1,23 +1,16 @@
 import { useEffect, useState } from 'react';
-import { Moon, Sun, Monitor } from 'lucide-react';
+import { Moon, Sun } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-type Theme = 'light' | 'dark' | 'system';
-
-function getSystemTheme(): 'light' | 'dark' {
-  return window.matchMedia('(prefers-color-scheme: dark)').matches
-    ? 'dark'
-    : 'light';
-}
+type Theme = 'light' | 'dark';
 
 function applyTheme(theme: Theme) {
-  const resolved = theme === 'system' ? getSystemTheme() : theme;
-  document.documentElement.classList.toggle('dark', resolved === 'dark');
+  document.documentElement.classList.toggle('dark', theme === 'dark');
 }
 
 export function ThemeToggle() {
   const [theme, setTheme] = useState<Theme>(() => {
-    return (localStorage.getItem('theme') as Theme) || 'system';
+    return (localStorage.getItem('theme') as Theme) || 'light';
   });
 
   useEffect(() => {
@@ -25,28 +18,12 @@ export function ThemeToggle() {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    const handler = () => {
-      if (theme === 'system') applyTheme('system');
-    };
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  }, [theme]);
-
-  const cycle = () => {
-    setTheme((prev) => {
-      if (prev === 'light') return 'dark';
-      if (prev === 'dark') return 'system';
-      return 'light';
-    });
-  };
-
-  const Icon = theme === 'light' ? Sun : theme === 'dark' ? Moon : Monitor;
+  const toggle = () => setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
+  const Icon = theme === 'light' ? Sun : Moon;
 
   return (
-    <Button variant="ghost" size="icon" onClick={cycle} aria-label="Toggle theme">
-      <Icon className="h-5 w-5" />
+    <Button variant="ghost" size="icon" onClick={toggle} aria-label="Toggle theme">
+      <Icon className="h-4 w-4" />
     </Button>
   );
 }

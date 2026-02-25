@@ -2,7 +2,7 @@ import json
 import logging
 import time
 
-import anthropic
+import openai
 
 from clauseguard.config import settings
 from clauseguard.models.clause import ClauseType
@@ -13,24 +13,35 @@ MAX_RETRIES = 3
 RETRY_BASE_DELAY = 2.0
 
 
-def _call_with_retry(client, model: str, max_tokens: int, messages: list) -> str:
-    """Call Claude API with exponential backoff retry on overloaded errors."""
+def _call_with_retry(client: openai.OpenAI, model: str, max_tokens: int, messages: list) -> str:
+    """Call LLM API with exponential backoff retry on overloaded errors."""
     for attempt in range(MAX_RETRIES):
         try:
-            message = client.messages.create(
+            response = client.chat.completions.create(
                 model=model,
                 max_tokens=max_tokens,
                 messages=messages,
             )
-            return message.content[0].text.strip()
-        except anthropic.APIStatusError as e:
-            if e.status_code == 529 and attempt < MAX_RETRIES - 1:
+            return response.choices[0].message.content.strip()
+        except openai.APIStatusError as e:
+            if e.status_code in (429, 529) and attempt < MAX_RETRIES - 1:
                 delay = RETRY_BASE_DELAY * (2 ** attempt)
                 logger.warning("API overloaded, retrying in %.1fs (attempt %d/%d)", delay, attempt + 1, MAX_RETRIES)
                 time.sleep(delay)
             else:
                 raise
     raise RuntimeError("Unreachable")
+
+
+def _strip_markdown_fences(raw: str) -> str:
+    """Strip markdown code fences from LLM response."""
+    if raw.startswith("```"):
+        raw = raw.split("\n", 1)[1] if "\n" in raw else raw[3:]
+        if raw.endswith("```"):
+            raw = raw[:-3]
+        raw = raw.strip()
+    return raw
+
 
 EXTRACT_CLAUSES_PROMPT = """\
 You are a legal contract analyst. Extract all distinct legal clauses from the following contract text.
@@ -90,14 +101,17 @@ Return only valid JSON.
 
 
 class ClaudeService:
-    """Wrapper around the Anthropic SDK for clause extraction and review."""
+    """Wrapper around OpenAI-compatible API for clause extraction and review."""
 
-    def __init__(self, api_key: str | None = None, model: str | None = None):
-        self.client = anthropic.Anthropic(api_key=api_key or settings.anthropic_api_key)
-        self.model = model or settings.claude_model
+    def __init__(self, api_key: str | None = None, base_url: str | None = None, model: str | None = None):
+        self.client = openai.OpenAI(
+            api_key=api_key or settings.llm_api_key,
+            base_url=base_url or settings.llm_base_url,
+        )
+        self.model = model or settings.llm_model
 
     def extract_clauses(self, contract_text: str) -> list[dict]:
-        """Extract clauses from contract text using Claude."""
+        """Extract clauses from contract text using LLM."""
         clause_types = ", ".join(f'"{ct.value}"' for ct in ClauseType)
         prompt = EXTRACT_CLAUSES_PROMPT.format(
             clause_types=clause_types, contract_text=contract_text[:50000]
@@ -107,21 +121,16 @@ class ClaudeService:
             self.client, self.model, 4096,
             [{"role": "user", "content": prompt}],
         )
-        # Strip markdown fences if present
-        if raw.startswith("```"):
-            raw = raw.split("\n", 1)[1] if "\n" in raw else raw[3:]
-            if raw.endswith("```"):
-                raw = raw[:-3]
-            raw = raw.strip()
+        raw = _strip_markdown_fences(raw)
 
         try:
             clauses = json.loads(raw)
         except json.JSONDecodeError:
-            logger.error("Failed to parse Claude extraction response: %s", raw[:500])
+            logger.error("Failed to parse LLM extraction response: %s", raw[:500])
             return []
 
         if not isinstance(clauses, list):
-            logger.error("Expected list from Claude, got %s", type(clauses))
+            logger.error("Expected list from LLM, got %s", type(clauses))
             return []
 
         return clauses
@@ -133,7 +142,7 @@ class ClaudeService:
         template_text: str,
         requirements: list[str],
     ) -> dict:
-        """Compare a single clause against a template using Claude."""
+        """Compare a single clause against a template using LLM."""
         prompt = COMPARE_CLAUSE_PROMPT.format(
             clause_type=clause_type,
             clause_text=clause_text,
@@ -145,16 +154,12 @@ class ClaudeService:
             self.client, self.model, 2048,
             [{"role": "user", "content": prompt}],
         )
-        if raw.startswith("```"):
-            raw = raw.split("\n", 1)[1] if "\n" in raw else raw[3:]
-            if raw.endswith("```"):
-                raw = raw[:-3]
-            raw = raw.strip()
+        raw = _strip_markdown_fences(raw)
 
         try:
             return json.loads(raw)
         except json.JSONDecodeError:
-            logger.error("Failed to parse Claude comparison response: %s", raw[:500])
+            logger.error("Failed to parse LLM comparison response: %s", raw[:500])
             return {
                 "severity": "medium",
                 "deviation": "Unable to parse AI response",
@@ -176,16 +181,12 @@ class ClaudeService:
             self.client, self.model, 1024,
             [{"role": "user", "content": prompt}],
         )
-        if raw.startswith("```"):
-            raw = raw.split("\n", 1)[1] if "\n" in raw else raw[3:]
-            if raw.endswith("```"):
-                raw = raw[:-3]
-            raw = raw.strip()
+        raw = _strip_markdown_fences(raw)
 
         try:
             return json.loads(raw)
         except json.JSONDecodeError:
-            logger.error("Failed to parse Claude summary response: %s", raw[:500])
+            logger.error("Failed to parse LLM summary response: %s", raw[:500])
             return {
                 "summary": "Unable to generate summary. Please review findings manually.",
                 "overall_risk_score": 5.0,

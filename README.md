@@ -4,6 +4,14 @@
 
 ---
 
+## Screenshots
+
+| Dashboard | Contract Detail |
+|:---------:|:---------------:|
+| ![Dashboard](frontend/public/images/dashboard.png) | ![Contract Detail](frontend/public/images/contract-detail.png) |
+
+---
+
 ## Architecture
 
 ```mermaid

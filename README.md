@@ -150,7 +150,7 @@ cp .env.example .env
 
 ```env
 LLM_API_KEY=sk-...
-LLM_BASE_URL=https://your-llm-endpoint.com
+LLM_BASE_URL=https://your-openai-compatible-endpoint.com
 LLM_MODEL=claude-sonnet-4-5-20250929
 ```
 
@@ -288,7 +288,7 @@ ClauseGuard/
 | Variable | Default | Description |
 |:---------|:--------|:------------|
 | `LLM_API_KEY` | — | API key for LLM service (required) |
-| `LLM_BASE_URL` | `https://prod.litellm.deeprunner.ai` | OpenAI-compatible endpoint |
+| `LLM_BASE_URL` | — | OpenAI-compatible endpoint (required) |
 | `LLM_MODEL` | `claude-sonnet-4-5-20250929` | Model for extraction and review |
 | `ELASTICSEARCH_URL` | `http://localhost:9200` | Elasticsearch endpoint |
 | `EMBEDDING_MODEL` | `all-MiniLM-L6-v2` | Sentence transformer model |
